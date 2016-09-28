@@ -1,3 +1,5 @@
+# Copyright (c) 2016 Daniel Newman (see License file)
+
 import numpy as np # used for reading/writing CSVs
 import pulp # library used for linear programming
 import csv
