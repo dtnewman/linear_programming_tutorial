@@ -93,8 +93,13 @@ for i in range(NUM_STUDENTS):
 decision_vars_list = []
 for i in range(NUM_PERIODS):
     variable_type_name = 'period_%s_decision_variable' % (i + 1)
-    decision_vars_list.append(pulp.LpVariable.dicts(variable_type_name, decision_var_matrix, 
-                                                    0, 1, pulp.LpBinary))
+    decision_vars_list.append(pulp.LpVariable.dicts(name=variable_type_name, 
+                                                    indexs=decision_var_matrix, 
+                                                    lowBound=0, 
+                                                    upBound=1, 
+                                                    cat=pulp.LpInteger))
+    # note: For continuous variables, set "cat" (i.e. category) to pulp.LpContinuous instead
+    
 
 # We now have one set of decision variables for each period. Think of each set of decision 
 # variables as an m-by-n matrix of binary (1 or 0) values where 'm' is the number of students and 
@@ -105,27 +110,27 @@ for i in range(NUM_PERIODS):
 #------------------------------------------------------
 
 # CONSTRAINT 1: each student must be in one and only one activity per period
-for decision_vars in decision_vars_list:
-    for i in range(NUM_STUDENTS):
-        vars_to_sum = [decision_vars[(i, j)] for j in range(NUM_ACTIVITIES)]
+for i in range(NUM_STUDENTS):
+    for k in range(NUM_PERIODS):
+        vars_to_sum = [decision_vars_list[k][(i, j)] for j in range(NUM_ACTIVITIES)]
         prob += pulp.lpSum(vars_to_sum) == 1
 
 # CONSTRAINT 2: a student cannot repeat an activity
 for i in range(NUM_STUDENTS):
     for j in range(NUM_ACTIVITIES):
-        vars_to_sum = [decision_vars[(i, j)] for decision_vars in decision_vars_list]
+        vars_to_sum = [decision_vars_list[k][(i, j)] for k in range(NUM_PERIODS)]
         prob += pulp.lpSum(vars_to_sum) <= 1
 
 # CONSTRAINT 3: each activity must have a minimum number of students
-for decision_vars in decision_vars_list:
-    for j in range(NUM_ACTIVITIES):
-        vars_to_sum = [decision_vars[(i, j)] for i in range(NUM_STUDENTS)]
+for j in range(NUM_ACTIVITIES):
+    for k in range(NUM_PERIODS):
+        vars_to_sum = [decision_vars_list[k][(i, j)] for i in range(NUM_STUDENTS)]
         prob += pulp.lpSum(vars_to_sum) >= MIN_NUM_IN_ACTIVITY
 
 # CONSTRAINT 4: each activity can only have up to a maximum number of students
-for decision_vars in decision_vars_list:
-    for j in range(NUM_ACTIVITIES):
-        vars_to_sum = [decision_vars[(i, j)] for i in range(NUM_STUDENTS)]
+for j in range(NUM_ACTIVITIES):
+    for k in range(NUM_PERIODS):
+        vars_to_sum = [decision_vars_list[k][(i, j)] for i in range(NUM_STUDENTS)]
         prob += pulp.lpSum(vars_to_sum) <= MAX_NUM_IN_ACTIVITY
 
 # CONSTRAINT 5: each student must get 3 of their 4 choices
@@ -133,8 +138,8 @@ for i in range(NUM_STUDENTS):
     # remember, student_info_dicts[i]['choices'] looks like [x1, x2, x3, x4] where
     # x1...x4 are the activity numbers for the student's first through fourth  
     # choices respectively
-    vars_to_sum = [decision_vars[(i, j)] for decision_vars in decision_vars_list
-                                         for j in student_info_dicts[i]['choices']]
+    vars_to_sum = [decision_vars_list[k][(i, j)] for j in student_info_dicts[i]['choices']
+                                                 for k in range(NUM_PERIODS)]
     prob += pulp.lpSum(vars_to_sum) == 3
 
 # STEP 6: SETUP OBJECTIVE FUNCTION
@@ -151,13 +156,13 @@ for i in range(NUM_STUDENTS):
 # For example, the same number of points are rewarded whether the student does their
 # first choice activity in the first period or the last period.
 objective_function_parts = []
-for decision_vars in decision_vars_list:
-    for i in range(NUM_STUDENTS):
+for i in range(NUM_STUDENTS):
+    for k in range(NUM_PERIODS):
         choice1, choice2, choice3, choice4 = student_info_dicts[i]['choices']
-        objective_function_parts.append([decision_vars[(i, choice1)]*1000])
-        objective_function_parts.append([decision_vars[(i, choice2)]*100])
-        objective_function_parts.append([decision_vars[(i, choice3)]*10])
-        objective_function_parts.append([decision_vars[(i, choice4)]*1])
+        objective_function_parts.append([decision_vars_list[k][(i, choice1)]*1000])
+        objective_function_parts.append([decision_vars_list[k][(i, choice2)]*100])
+        objective_function_parts.append([decision_vars_list[k][(i, choice3)]*10])
+        objective_function_parts.append([decision_vars_list[k][(i, choice4)]*1])
 
 prob += pulp.lpSum(objective_function_parts)
 
