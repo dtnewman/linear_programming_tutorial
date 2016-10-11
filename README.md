@@ -1,5 +1,7 @@
 # Linear Programming in Python
 
+See an explanation of this project [here](https://www.dtnewman.com/blog/linear-programming-in-python.html).
+
 The important files here are as follows:
 
 * science_fair.py - the main file containing the python script 
